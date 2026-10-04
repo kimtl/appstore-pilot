@@ -246,3 +246,6 @@ extension CameraService: AVCaptureVideoDataOutputSampleBufferDelegate {
         lock.unlock()
     }
 }
+
+// 공유 상태는 sessionQueue 와 NSLock 으로 보호하므로 스레드 간 전달이 안전하다.
+extension CameraService: @unchecked Sendable {}
