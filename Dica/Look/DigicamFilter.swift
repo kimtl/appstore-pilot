@@ -22,11 +22,14 @@ final class DigicamFilter: CIFilter {
     override var outputImage: CIImage? {
         guard let inputImage else { return nil }
         let extent = inputImage.extent
+        // 색수차가 가장자리 바깥을 샘플링하면 투명 픽셀이 섞여 테두리에 청록 선이 생긴다.
+        // 가장자리 픽셀을 바깥으로 늘린 이미지를 커널에 넘기고 결과를 원래 크기로 자른다.
+        let clamped = inputImage.clampedToExtent()
         return Self.kernel.apply(
             extent: extent,
             // 색수차 샘플링이 주변 픽셀을 읽으므로 ROI 를 넉넉히 넓힌다 (최대 오프셋 약 7px)
             roiCallback: { _, rect in rect.insetBy(dx: -32, dy: -32) },
-            arguments: [inputImage, grain, vignette, fringe, seed]
-        )
+            arguments: [clamped, CIVector(cgRect: extent), grain, vignette, fringe, seed]
+        )?.cropped(to: extent)
     }
 }

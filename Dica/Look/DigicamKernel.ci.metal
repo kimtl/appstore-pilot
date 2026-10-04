@@ -25,14 +25,16 @@ static float luma(float3 c) {
 
 extern "C" {
 
+// ext: 원본 이미지의 extent (x, y, w, h). 입력은 가장자리가 바깥으로 늘어난(clamped) 이미지라
+// src.extent() 가 무한대이므로 크기를 따로 받는다.
 float4 digicam(coreimage::sampler src,
+               float4 ext,
                float grain,
                float vignette,
                float fringe,
                float seed,
                coreimage::destination dest)
 {
-    float4 ext = src.extent();
     float2 size = ext.zw;
     float2 p = dest.coord();
     float2 uv = (p - ext.xy) / size;
