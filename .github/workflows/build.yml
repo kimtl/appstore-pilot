@@ -1,4 +1,4 @@
-# macOS 러너에서 XcodeGen 으로 프로젝트를 만들고 시뮬레이터용으로 빌드만 합니다 (서명 없음).
+# macOS 러너에서 XcodeGen 으로 프로젝트를 만들고, 시뮬레이터 빌드 후 룩 미리보기 테스트를 돌려 결과 이미지를 아티팩트로 올립니다.
 name: Build
 
 on:
@@ -15,6 +15,16 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
+      - name: Fetch sample photos (if none committed)
+        run: |
+          mkdir -p DicaTests/Fixtures
+          if ! ls DicaTests/Fixtures/*.jpg >/dev/null 2>&1; then
+            for id in 1005 1011 1025 1027; do
+              curl -fsSL --retry 3 -o "DicaTests/Fixtures/sample_$id.jpg" "https://picsum.photos/id/$id/1600/1200.jpg" || true
+            done
+          fi
+          ls -la DicaTests/Fixtures
+
       - name: Generate project
         run: xcodegen generate
 
@@ -27,3 +37,25 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO \
             build
+
+      - name: Look preview (iOS Simulator tests)
+        env:
+          TEST_RUNNER_DICA_OUTPUT_DIR: ${{ github.workspace }}/look-output
+        run: |
+          xcodebuild \
+            -project Dica.xcodeproj \
+            -scheme Dica \
+            -configuration Debug \
+            -destination 'platform=iOS Simulator,name=iPhone 16' \
+            -only-testing:DicaTests \
+            CODE_SIGNING_ALLOWED=NO \
+            test
+          ls -la look-output
+
+      - name: Upload look preview
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: look-preview
+          path: look-output
+          if-no-files-found: warn

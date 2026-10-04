@@ -46,12 +46,31 @@ targets:
         SWIFT_STRICT_CONCURRENCY: minimal
         ENABLE_USER_SCRIPT_SANDBOXING: YES
 
+  DicaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: DicaTests
+        excludes:
+          - "Fixtures/README.md"
+    dependencies:
+      - target: Dica
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kimtl.dica.tests
+        CODE_SIGN_STYLE: Automatic
+
 schemes:
   Dica:
     build:
       targets:
         Dica: all
+        DicaTests: [test]
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - DicaTests
     archive:
       config: Release
