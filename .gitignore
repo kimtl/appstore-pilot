@@ -1,0 +1,13 @@
+# XcodeGen 이 생성하는 파일
+*.xcodeproj
+Dica/Info.plist
+
+# Xcode
+xcuserdata/
+DerivedData/
+*.xcworkspace
+*.xcuserstate
+build/
+
+# macOS
+.DS_Store

@@ -1,0 +1,29 @@
+# macOS 러너에서 XcodeGen 으로 프로젝트를 만들고 시뮬레이터용으로 빌드만 합니다 (서명 없음).
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build (iOS Simulator)
+        run: |
+          xcodebuild \
+            -project Dica.xcodeproj \
+            -scheme Dica \
+            -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build

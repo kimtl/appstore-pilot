@@ -1,0 +1,57 @@
+# XcodeGen 프로젝트 정의. `xcodegen generate` 로 Dica.xcodeproj 를 만듭니다.
+name: Dica
+options:
+  bundleIdPrefix: com.kimtl
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+
+targets:
+  Dica:
+    type: application
+    platform: iOS
+    sources:
+      - path: Dica
+    info:
+      path: Dica/Info.plist
+      properties:
+        CFBundleDisplayName: 디카
+        CFBundleName: Dica
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIUserInterfaceStyle: Dark
+        LSRequiresIPhoneOS: true
+        ITSAppUsesNonExemptEncryption: false
+        NSCameraUsageDescription: 사진을 찍으려면 카메라가 필요해요.
+        NSPhotoLibraryAddUsageDescription: 찍은 사진을 앨범에 저장하기 위해 필요해요.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kimtl.dica
+        TARGETED_DEVICE_FAMILY: "1"
+        # Core Image Metal 커널(.ci.metal)을 default.metallib 에 포함시키기 위한 필수 플래그
+        MTL_COMPILER_FLAGS: -fcikernel
+        MTLLINKER_FLAGS: -cikernel
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_STRICT_CONCURRENCY: minimal
+        ENABLE_USER_SCRIPT_SANDBOXING: YES
+
+schemes:
+  Dica:
+    build:
+      targets:
+        Dica: all
+    run:
+      config: Debug
+    archive:
+      config: Release
