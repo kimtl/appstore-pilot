@@ -3,7 +3,12 @@ name: Build
 
 on:
   push:
+    branches-ignore:
+      - look-preview
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -59,3 +64,30 @@ jobs:
           name: look-preview
           path: look-output
           if-no-files-found: warn
+
+      # 결과 이미지를 look-preview 브랜치에 덮어써서 GitHub 에서 바로 볼 수 있게 한다.
+      # https://github.com/kimtl/appstore-pilot/tree/look-preview
+      - name: Publish look preview branch
+        if: success()
+        run: |
+          set -e
+          cd look-output
+          git init -q
+          git checkout -q -b look-preview
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          {
+            echo "# 디카 룩 미리보기"
+            echo
+            echo "소스 커밋 \`${GITHUB_SHA::7}\` · $(date -u +'%Y-%m-%d %H:%M UTC')"
+            echo
+            for f in *.jpg; do
+              echo "## $f"
+              echo
+              echo "![$f]($f)"
+              echo
+            done
+          } > README.md
+          git add .
+          git commit -q -m "Look preview for ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" look-preview
