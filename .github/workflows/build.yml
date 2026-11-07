@@ -5,6 +5,9 @@ on:
   push:
     branches-ignore:
       - look-preview
+    paths-ignore:
+      - "flip/**"
+      - ".github/workflows/flip.yml"
   workflow_dispatch:
 
 permissions:

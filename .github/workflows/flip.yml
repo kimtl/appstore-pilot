@@ -1,0 +1,32 @@
+# Flip 웹앱: 단위 테스트, 타입 체크, 프로덕션 빌드
+name: Flip
+
+on:
+  push:
+    branches-ignore:
+      - look-preview
+    paths:
+      - "flip/**"
+      - ".github/workflows/flip.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: flip
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: flip/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
