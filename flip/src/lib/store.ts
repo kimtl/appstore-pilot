@@ -1,5 +1,6 @@
 // 혼자 쓰는 앱이라 DB 대신 키-값 저장소 하나로 충분하다.
 // - Vercel: Upstash Redis (Vercel Marketplace 에서 연결하면 KV_REST_API_URL / KV_REST_API_TOKEN 이 자동으로 들어옴)
+// - Render: 영구 디스크를 붙이고 DATA_DIR 로 그 경로를 알려줌 (또는 Upstash Redis)
 // - 로컬: ./data/*.json
 import { promises as fs } from "node:fs";
 import path from "node:path";
@@ -84,7 +85,10 @@ export function kv(): KV {
   const url = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
   if (url && token) instance = new RedisRestKV(url.replace(/\/$/, ""), token);
+  else if (process.env.DATA_DIR) instance = new FileKV(process.env.DATA_DIR);
   else if (process.env.VERCEL) throw new Error("Vercel 에서는 Upstash Redis 를 연결해야 합니다 (KV_REST_API_URL / KV_REST_API_TOKEN).");
+  // Render 의 기본 파일시스템은 배포·재시작 때 지워지므로, 모르고 데이터를 날리지 않게 막는다.
+  else if (process.env.RENDER) throw new Error("Render 에서는 영구 디스크를 붙이고 DATA_DIR 을 설정하거나, Upstash Redis 를 연결해야 합니다.");
   else instance = new FileKV(path.join(process.cwd(), "data"));
   return instance;
 }

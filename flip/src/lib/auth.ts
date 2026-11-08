@@ -11,7 +11,8 @@ function expected(): string | undefined {
 }
 
 export function passwordRequired() {
-  return Boolean(process.env.APP_PASSWORD) || Boolean(process.env.VERCEL);
+  // 배포 환경에서는 비밀번호가 없으면 아예 못 들어오게 한다 (실수로 공개되지 않게).
+  return Boolean(process.env.APP_PASSWORD) || Boolean(process.env.VERCEL) || Boolean(process.env.RENDER);
 }
 
 export function checkPassword(input: string): string | undefined {

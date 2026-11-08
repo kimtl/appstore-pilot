@@ -83,7 +83,32 @@ npm run dev                  # http://localhost:3000
 
 로컬에서는 데이터가 `flip/data/*.json` 에 저장된다 (git 에는 안 올라감).
 
-### 3. Vercel 배포 (폰에서도 쓰기)
+### 3. Render 배포 (폰에서도 쓰기)
+
+레포 루트의 `render.yaml` 이 웹 서비스와 매일 스캔 크론을 한 번에 만든다.
+
+1. Render 대시보드 → **New → Blueprint** → 이 레포 선택 → `render.yaml` 인식.
+2. 입력 창에 값을 넣는다 (`sync: false` 항목):
+   - `APP_PASSWORD`, `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`, `EBAY_RUNAME`, `ANTHROPIC_API_KEY`
+   - `PUBLIC_BASE_URL`, 크론의 `APP_URL`: 둘 다 `https://flip-xxxx.onrender.com` (서비스 이름이 겹치면 Render 가 뒤에 문자를 붙이므로, 처음 만든 뒤 실제 주소로 고치고 재배포)
+   - `CRON_SECRET`, `EBAY_VERIFICATION_TOKEN` 은 Render 가 자동 생성
+3. 배포가 끝나면 eBay 개발자 콘솔에서:
+   - 계정 삭제 알림 Endpoint `https://<주소>/api/ebay/account-deletion`, Verification token 은 Render 의 `EBAY_VERIFICATION_TOKEN` 값 복사
+   - RuName 의 Auth accepted URL `https://<주소>/api/oauth/callback`
+
+| | 웹 서비스 | 크론 |
+|---|---|---|
+| 플랜 | Starter (영구 디스크 1GB, `/var/data`) | Starter (실행 시간만큼만 과금) |
+| 데이터 | `DATA_DIR=/var/data` 에 JSON 파일 | — |
+| 하는 일 | 앱 | 매일 22:17(KST) `/api/cron/scan` 호출 → 자동 정찰 → 전체 스캔 |
+
+- Render 의 기본 파일시스템은 배포·재시작 때 지워진다. 그래서 디스크나 Redis 없이 Render 에서 뜨면 앱이 일부러 에러를 낸다.
+- 디스크를 붙인 서비스는 배포할 때 몇 초 내려갔다 올라온다 (혼자 쓰는 앱이라 문제 없음).
+- Render 에서는 `APP_PASSWORD` 가 없으면 아무도 못 들어온다.
+
+**Upstash 로 무료**: 웹 서비스를 `plan: free` 로 바꾸고 `disk` 와 `DATA_DIR` 을 지운 뒤, [Upstash](https://upstash.com) 무료 Redis 의 `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` 을 넣는다. 무료 서비스는 15분 쓰지 않으면 잠들어 첫 접속이 30초~1분 걸린다. 크론은 무료 플랜이 없으니, 크론까지 무료로 하려면 GitHub Actions 예약 작업 등으로 같은 `curl` 을 부르면 된다.
+
+### 4. Vercel 배포 (대안)
 
 1. Vercel 에서 이 레포를 import, **Root Directory = `flip`**.
 2. Storage → **Upstash Redis** 연결 (`KV_REST_API_URL`, `KV_REST_API_TOKEN` 자동 설정).

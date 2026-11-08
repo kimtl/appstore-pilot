@@ -1,0 +1,66 @@
+# Render Blueprint — Flip 웹앱 + 매일 자동 스캔.
+# Render 대시보드 → New → Blueprint → 이 레포 선택. sync: false 값은 처음 만들 때 입력 창이 뜬다.
+services:
+  - type: web
+    name: flip
+    runtime: node
+    rootDir: flip
+    # 영구 디스크는 유료 플랜에서만 붙는다. 무료로 쓰려면 README 의 "Upstash 로 무료" 참고.
+    plan: starter
+    region: oregon
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /login
+    disk:
+      name: flip-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: DATA_DIR
+        value: /var/data
+      - key: APP_PASSWORD
+        sync: false
+      - key: EBAY_ENV
+        value: production
+      - key: EBAY_MARKETPLACE
+        value: EBAY_US
+      - key: EBAY_CLIENT_ID
+        sync: false
+      - key: EBAY_CLIENT_SECRET
+        sync: false
+      - key: EBAY_RUNAME
+        sync: false
+      - key: EBAY_VERIFICATION_TOKEN
+        generateValue: true
+      - key: PUBLIC_BASE_URL
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+
+  # 매일 한국 시간 22:17 (UTC 13:17): 자동 정찰(켜져 있으면) → 모든 사냥 스캔.
+  - type: cron
+    name: flip-daily-scan
+    runtime: node
+    rootDir: flip
+    plan: starter
+    region: oregon
+    schedule: "17 13 * * *"
+    buildCommand: "true"
+    startCommand: >-
+      curl -fsS --max-time 600
+      -H "Authorization: Bearer $CRON_SECRET"
+      "$APP_URL/api/cron/scan"
+    envVars:
+      - key: CRON_SECRET
+        fromService:
+          type: web
+          name: flip
+          envVarKey: CRON_SECRET
+      - key: APP_URL
+        sync: false
