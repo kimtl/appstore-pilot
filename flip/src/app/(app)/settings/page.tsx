@@ -9,9 +9,11 @@ import {
   disconnectEbayAction,
   pasteCodeAction,
   saveAddressAction,
+  saveAiSettingsAction,
   saveFeesAction,
   savePoliciesAction,
 } from "../../actions";
+import { aiConfigured } from "@/lib/ai/claude";
 
 const FEE_INPUTS: { key: keyof FeeSettings; label: string; percent?: boolean; hint?: string }[] = [
   { key: "finalValueFeeRate", label: "판매 수수료율 (%)", percent: true, hint: "미국 대부분 13.6%, 카테고리마다 다름" },
@@ -153,6 +155,35 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           </ActionForm>
         </section>
       )}
+
+      <section className="card" id="claude">
+        <h2>Claude</h2>
+        {aiConfigured() ? (
+          <ActionForm action={saveAiSettingsAction} className="grid">
+            <label className="check wide">
+              <input type="checkbox" name="autopilot" defaultChecked={settings.ai.autopilot} />
+              매일 자동 정찰 (크론이 스캔 전에 Claude 에게 사냥 목록을 고치게 함)
+            </label>
+            <label>
+              Claude 사냥 최대 개수
+              <input name="maxHunts" type="number" min={1} max={30} defaultValue={settings.ai.maxHunts} />
+            </label>
+            <label>
+              물건당 최대 매입가 ($)
+              <input name="maxBuyPerItem" type="number" step="1" defaultValue={settings.ai.maxBuyPerItem} />
+            </label>
+            <label className="wide">
+              Claude 에게 주는 방향 <small>예: 게임기·오디오 위주, 부피 큰 것 제외, 애플 제품은 빼기</small>
+              <textarea name="guidance" rows={3} defaultValue={settings.ai.guidance} maxLength={1000} />
+            </label>
+            <Submit variant="ghost">저장</Submit>
+          </ActionForm>
+        ) : (
+          <p className="hint">
+            <code>ANTHROPIC_API_KEY</code> 환경변수를 넣으면 Claude 가 사냥감을 고르고, 스캔한 딜을 사기 전에 검토해요.
+          </p>
+        )}
+      </section>
 
       <section className="card">
         <h2>수수료·비용</h2>

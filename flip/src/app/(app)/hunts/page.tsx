@@ -1,8 +1,11 @@
-import { getScan, listHunts } from "@/lib/data";
+import Link from "next/link";
+import { getScan, getSettings, listHunts } from "@/lib/data";
+import { aiConfigured } from "@/lib/ai/claude";
+import { listScoutRuns } from "@/lib/ai/scout";
 import type { Hunt } from "@/lib/deals";
 import { ago, money } from "@/lib/format";
 import { ActionForm, Submit } from "@/components/ActionForm";
-import { deleteHuntAction, saveHuntAction, scanHuntAction } from "../../actions";
+import { deleteHuntAction, runScoutAction, saveHuntAction, scanHuntAction } from "../../actions";
 
 const REJECT_LABEL: Record<string, string> = {
   titleMismatch: "다른 물건",
@@ -58,6 +61,9 @@ function HuntFields({ hunt }: { hunt?: Hunt }) {
 export default async function HuntsPage() {
   const hunts = await listHunts();
   const scans = await Promise.all(hunts.map((h) => getScan(h.id)));
+  const ai = aiConfigured();
+  const [runs, settings] = await Promise.all([listScoutRuns(), getSettings()]);
+  const claudeCount = hunts.filter((h) => h.source === "claude").length;
 
   return (
     <>
@@ -66,6 +72,40 @@ export default async function HuntsPage() {
         잘 아는 물건일수록 좋아요. 모델명·용량까지 구체적으로 적어야 시세가 정확해져요. 사냥 하나에 eBay API 를 3번 씁니다 (하루 기본 한도 5,000회).
       </p>
 
+      <section className="card scout">
+        <div className="row spread">
+          <div>
+            <h2>Claude 정찰병</h2>
+            <p className="hint">
+              {ai
+                ? `Claude 가 내 매매 성적과 eBay 시세를 직접 확인해서 사냥을 추가·조정·중단해요. Claude 사냥 ${claudeCount}/${settings.ai.maxHunts}개 · 물건당 최대 $${settings.ai.maxBuyPerItem} · 매일 자동 정찰 ${settings.ai.autopilot ? "켜짐" : "꺼짐"}`
+                : "ANTHROPIC_API_KEY 를 설정하면 Claude 가 사냥감을 골라요."}{" "}
+              <Link href="/settings#claude">설정</Link>
+            </p>
+          </div>
+          {ai && (
+            <ActionForm action={runScoutAction}>
+              <Submit pending="Claude 가 시세 보는 중… (1~3분)">지금 정찰</Submit>
+            </ActionForm>
+          )}
+        </div>
+        {runs.slice(0, 3).map((r) => (
+          <div key={r.at} className="run">
+            <p className="hint">
+              {ago(r.at)} · 시세 확인 {r.probes}번
+            </p>
+            {r.error ? <p className="msg error">{r.error}</p> : <p>{r.summary}</p>}
+            {r.changes.length > 0 && (
+              <ul>
+                {r.changes.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+      </section>
+
       <div className="list">
         {hunts.map((h, i) => {
           const s = scans[i];
@@ -73,7 +113,11 @@ export default async function HuntsPage() {
             <article key={h.id} className="card">
               <div className="row spread">
                 <div>
-                  <h3>{h.query}</h3>
+                  <h3>
+                    {h.query}
+                    {h.source === "claude" && <span className="badge claude">Claude</span>}
+                  </h3>
+                  {h.reason && <p className="hint">{h.reason}</p>}
                   <p className="hint">
                     {h.condition === "new" ? "새 제품" : h.condition === "parts" ? "부품용" : "중고"} · 최소 {money(h.minProfit)} / {Math.round(h.minRoi * 100)}%
                     {h.maxBuy ? ` · 상한 ${money(h.maxBuy)}` : ""}

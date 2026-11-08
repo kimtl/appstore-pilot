@@ -3,7 +3,7 @@ import { aspectsFromItem, draftFromItem, matchSales, validateDraft } from "./lis
 import { toListing, buildFilter } from "./ebay/browse";
 import { extractCode } from "./ebay/oauth";
 import { DEFAULT_FEES } from "./fees";
-import type { InventoryItem } from "./data";
+import { DEFAULT_AI, type InventoryItem } from "./data";
 
 describe("toListing", () => {
   it("Browse 검색 결과 한 줄을 정리한다", () => {
@@ -70,7 +70,7 @@ describe("draftFromItem", () => {
   });
 
   it("사진·정책·발송지가 없으면 등록을 막는다", () => {
-    const problems = validateDraft(draftFromItem(item, 199), { fees: DEFAULT_FEES });
+    const problems = validateDraft(draftFromItem(item, 199), { fees: DEFAULT_FEES, ai: DEFAULT_AI });
     expect(problems).toHaveLength(3);
   });
 });

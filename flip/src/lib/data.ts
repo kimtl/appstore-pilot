@@ -5,8 +5,22 @@ import { DEFAULT_FEES, type FeeSettings } from "./fees";
 import type { Hunt, ScanResult } from "./deals";
 import type { Address } from "./ebay/sell";
 
+export interface AiSettings {
+  /** 매일 크론에서 Claude 가 사냥 목록을 스스로 고치게 할지 */
+  autopilot: boolean;
+  /** Claude 가 만들 수 있는 사냥 개수 상한 */
+  maxHunts: number;
+  /** 물건 하나에 쓸 수 있는 최대 금액 */
+  maxBuyPerItem: number;
+  /** Claude 에게 주는 방향 (예: "전자제품 위주, 부피 큰 것 제외") */
+  guidance: string;
+}
+
+export const DEFAULT_AI: AiSettings = { autopilot: false, maxHunts: 10, maxBuyPerItem: 300, guidance: "" };
+
 export interface Settings {
   fees: FeeSettings;
+  ai: AiSettings;
   policies?: { fulfillmentPolicyId: string; paymentPolicyId: string; returnPolicyId: string };
   merchantLocationKey?: string;
   address?: Address;
@@ -35,6 +49,9 @@ export interface InventoryItem {
   imageUrl?: string;
   sourceItemId: string;
   sourceUrl?: string;
+  /** 어느 사냥에서 찾았는지 (Claude 가 사냥 성과를 판단할 때 씀) */
+  huntId?: string;
+  huntQuery?: string;
   currency: string;
   boughtAt: string;
   buyPrice: number;
@@ -63,7 +80,7 @@ export const itemCost = (i: InventoryItem) => i.buyPrice + i.buyShipping + i.buy
 
 export async function getSettings(): Promise<Settings> {
   const s = await kv().get<Settings>("settings");
-  return { ...s, fees: { ...DEFAULT_FEES, ...s?.fees } };
+  return { ...s, fees: { ...DEFAULT_FEES, ...s?.fees }, ai: { ...DEFAULT_AI, ...s?.ai } };
 }
 
 export async function saveSettings(patch: Partial<Settings>) {
@@ -80,7 +97,7 @@ export async function listHunts(): Promise<Hunt[]> {
 export async function saveHunt(h: Omit<Hunt, "id" | "createdAt"> & { id?: string }): Promise<Hunt> {
   const hunts = await listHunts();
   const existing = h.id ? hunts.find((x) => x.id === h.id) : undefined;
-  const hunt: Hunt = { ...h, id: existing?.id ?? randomUUID(), createdAt: existing?.createdAt ?? new Date().toISOString() };
+  const hunt: Hunt = { ...existing, ...h, id: existing?.id ?? randomUUID(), createdAt: existing?.createdAt ?? new Date().toISOString() };
   await kv().set("hunts", existing ? hunts.map((x) => (x.id === hunt.id ? hunt : x)) : [...hunts, hunt]);
   return hunt;
 }

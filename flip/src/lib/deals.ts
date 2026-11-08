@@ -24,6 +24,20 @@ export interface Hunt {
   /** 제목에 있으면 제외할 단어 */
   excludes: string[];
   createdAt: string;
+  /** 누가 만들었나. Claude 는 자기가 만든 사냥만 고치거나 끌 수 있다. */
+  source?: "me" | "claude";
+  /** Claude 가 이 사냥을 고른 이유 */
+  reason?: string;
+}
+
+export type Verdict = "buy" | "check" | "skip";
+
+export interface DealReview {
+  verdict: Verdict;
+  reason: string;
+  /** 같은 매물이라도 가격이 바뀌면 다시 본다 */
+  price: number;
+  reviewedAt: string;
 }
 
 export type DealWarning = "priceTooLow" | "lowFeedback" | "shipsFromAbroad" | "shippingUnknown" | "lowConfidence";
@@ -52,6 +66,7 @@ export interface Deal {
   warnings: DealWarning[];
   /** 정렬용: 순이익 × 신뢰도 보정 */
   score: number;
+  review?: DealReview;
 }
 
 export interface ScanResult {
@@ -63,6 +78,8 @@ export interface ScanResult {
   candidateCount: number;
   compCount: number;
   scannedAt: string;
+  /** Claude 검토가 실패했을 때 이유 (딜은 그대로 보여줌) */
+  reviewError?: string;
 }
 
 export interface EvaluateInput {

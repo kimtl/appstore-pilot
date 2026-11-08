@@ -4,6 +4,8 @@ import { isLoggedIn, passwordRequired } from "@/lib/auth";
 import { logout } from "../actions";
 
 export const dynamic = "force-dynamic";
+// Claude 정찰(1~3분)과 전체 스캔이 서버 액션 안에서 돈다.
+export const maxDuration = 300;
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!(await isLoggedIn())) redirect("/login");

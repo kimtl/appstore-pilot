@@ -3,8 +3,23 @@
 eBay 에서 **시세보다 싸게 올라온 매물을 찾아 사고, 다시 eBay 에 올려 파는** 개인용 웹앱. 나 혼자 쓰는 도구라 계정은 비밀번호 하나뿐이다.
 
 ```
-사냥 목록 ──스캔──▶ 딜 ──eBay 에서 구매──▶ 재고 ──사진·초안──▶ 등록 ──판매 확인──▶ 이익
+Claude 정찰 ──▶ 사냥 목록 ──스캔──▶ 딜 ──Claude 검토 ──eBay 에서 구매──▶ 재고 ──사진·초안──▶ 등록 ──판매 확인──▶ 이익
 ```
+
+## Claude 가 하는 일
+
+`ANTHROPIC_API_KEY` 를 넣으면 무엇을 살지를 Claude 가 판단한다.
+
+**정찰 (사냥 목록 짜기)** — 사냥 목록의 "지금 정찰", 또는 설정에서 "매일 자동 정찰"을 켜면 크론이 스캔 전에 실행.
+1. 브리핑을 받는다: 지금 사냥들과 최근 스캔 결과(딜 수, 시세, 걸러진 이유), 사냥별 매매 성적(산 것·판 것·실현 이익·판매까지 걸린 날), 주인 지침, 지난번에 Claude 가 남긴 메모.
+2. `probe_market` 도구로 후보 물건의 eBay 시세를 직접 확인한다 (한 번에 최대 20회). 비교 매물 수, 빨리 팔리는 가격, 목표 이익을 남기려면 얼마 이하로 사야 하는지, 지금 그 가격 이하 매물이 몇 개인지를 본다.
+3. `submit_plan` 으로 사냥 추가·기준 조정·중단과 다음 정찰 때 볼 메모를 낸다.
+
+규칙은 코드가 강제한다 (`applyPlan`): Claude 는 자기가 만든 사냥만 고치거나 끌 수 있고, 슬롯 수(기본 10)와 물건당 최대 매입가를 넘을 수 없다. 내가 Claude 사냥을 직접 고치면 그때부터 내 사냥이 된다.
+
+**딜 검토** — 스캔 때마다 사냥당 상위 8개 딜의 상세(상태 설명, 짧은 설명, 스펙, 사진 수, 판매자)를 읽고 `사세요 / 확인 필요 / 거르세요` 와 이유 한 줄을 단다. "충전기 없음", 다른 모델, 잠금, 사기 의심처럼 숫자 필터가 못 잡는 걸 거른다. 거른 딜은 딜 화면 아래 접힌 칸으로 간다. 같은 매물·같은 가격은 다시 검토하지 않는다.
+
+모델은 `claude-opus-5-5` (정찰 effort high, 검토 medium). 안전 분류기가 요청을 거절하면 서버가 권장 모델로 다시 돌리도록 `fallbacks: "default"` 를 켜 두었다. 비용은 대략 정찰 1회 수십 센트, 검토는 사냥당 몇 센트 수준 (딜 수·정찰 길이에 따라 다름).
 
 ## 흐름
 
@@ -72,8 +87,8 @@ npm run dev                  # http://localhost:3000
 
 1. Vercel 에서 이 레포를 import, **Root Directory = `flip`**.
 2. Storage → **Upstash Redis** 연결 (`KV_REST_API_URL`, `KV_REST_API_TOKEN` 자동 설정).
-3. 환경변수: `APP_PASSWORD`, `EBAY_*`, `PUBLIC_BASE_URL`, `EBAY_VERIFICATION_TOKEN`, `CRON_SECRET`.
-4. `vercel.json` 의 크론이 매일 한 번(UTC 13:17 = 한국 22:17) 모든 사냥을 스캔한다.
+3. 환경변수: `APP_PASSWORD`, `EBAY_*`, `ANTHROPIC_API_KEY`, `PUBLIC_BASE_URL`, `EBAY_VERIFICATION_TOKEN`, `CRON_SECRET`.
+4. `vercel.json` 의 크론이 매일 한 번(UTC 13:17 = 한국 22:17) 자동 정찰(켜져 있으면) 후 모든 사냥을 스캔한다.
 
 ## 개발
 
@@ -92,5 +107,7 @@ npm run build
 | `src/lib/listing.ts` | 등록 초안, 상태 코드 변환, 주문 매칭 |
 | `src/lib/publish.ts` | 등록·가격 변경·판매 확인 |
 | `src/lib/ebay/*` | OAuth, Browse, Sell(Inventory·Account·Fulfillment·Media) API |
+| `src/lib/ai/scout.ts` | Claude 정찰: 브리핑, 시세 확인 도구, 계획 적용 규칙 |
+| `src/lib/ai/review.ts` | Claude 딜 검토 |
 | `src/lib/store.ts` | Upstash Redis 또는 로컬 JSON |
 | `src/app/actions.ts` | 화면에서 부르는 서버 액션 |

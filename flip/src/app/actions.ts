@@ -82,6 +82,8 @@ export async function saveHuntAction(_: ActionState, f: FormData): Promise<Actio
       minProfit: numOrUndef(f, "minProfit") ?? 20,
       minRoi: (numOrUndef(f, "minRoi") ?? 25) / 100,
       excludes: str(f, "excludes").split(",").map((s) => s.trim()).filter(Boolean),
+      // 내가 고친 Claude 사냥은 그때부터 내 것 (Claude 가 다시 바꾸지 않게)
+      source: "me",
     });
     revalidatePath("/hunts");
     return "저장했어요.";
@@ -118,7 +120,7 @@ export async function scanAllAction(_: ActionState): Promise<ActionState> {
 
 // ── 구매 → 재고 ─────────────────────────────────
 
-async function addFromItem(item: Item, buy: { price: number; shipping: number }, expectedSale?: number) {
+async function addFromItem(item: Item, buy: { price: number; shipping: number }, expectedSale?: number, hunt?: { id: string; query: string }) {
   const settings = await getSettings();
   const cfg = ebayConfig();
   const tax = Math.round((buy.price + buy.shipping) * settings.fees.purchaseTaxRate * 100) / 100;
@@ -129,6 +131,8 @@ async function addFromItem(item: Item, buy: { price: number; shipping: number },
     imageUrl: item.image?.imageUrl,
     sourceItemId: item.itemId,
     sourceUrl: item.itemWebUrl,
+    huntId: hunt?.id,
+    huntQuery: hunt?.query,
     currency: cfg.marketplace.currency,
     boughtAt: new Date().toISOString(),
     buyPrice: buy.price,
@@ -151,6 +155,7 @@ export async function markBoughtAction(_: ActionState, f: FormData): Promise<Act
       item,
       { price: numOrUndef(f, "price") ?? deal.listing.price, shipping: numOrUndef(f, "shipping") ?? deal.breakdown.buyShipping },
       deal.estimate.quickSale,
+      (await listHunts()).find((h) => h.id === deal.huntId),
     );
     id = created.id;
   });
@@ -373,5 +378,33 @@ export async function saveFeesAction(_: ActionState, f: FormData): Promise<Actio
     await saveSettings({ fees });
     revalidatePath("/settings");
     return "수수료 설정을 저장했어요.";
+  });
+}
+
+// ── Claude 정찰병 ────────────────────────────────
+
+export async function runScoutAction(_: ActionState): Promise<ActionState> {
+  return guard(async () => {
+    const { runScout } = await import("@/lib/ai/scout");
+    const run = await runScout();
+    revalidatePath("/hunts");
+    return `${run.summary} (시세 확인 ${run.probes}번, 변경 ${run.changes.length}건)`;
+  });
+}
+
+export async function saveAiSettingsAction(_: ActionState, f: FormData): Promise<ActionState> {
+  return guard(async () => {
+    const cur = (await getSettings()).ai;
+    await saveSettings({
+      ai: {
+        autopilot: f.get("autopilot") === "on",
+        maxHunts: Math.max(1, Math.min(30, numOrUndef(f, "maxHunts") ?? cur.maxHunts)),
+        maxBuyPerItem: numOrUndef(f, "maxBuyPerItem") ?? cur.maxBuyPerItem,
+        guidance: str(f, "guidance").slice(0, 1000),
+      },
+    });
+    revalidatePath("/settings");
+    revalidatePath("/hunts");
+    return "Claude 설정을 저장했어요.";
   });
 }

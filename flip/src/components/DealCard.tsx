@@ -1,8 +1,10 @@
-import type { Deal } from "@/lib/deals";
+import type { Deal, Verdict } from "@/lib/deals";
 import { WARNING_LABEL } from "@/lib/deals";
 import { money, pct } from "@/lib/format";
 import { markBoughtAction } from "@/app/actions";
 import { ActionForm, Submit } from "./ActionForm";
+
+const VERDICT: Record<Verdict, string> = { buy: "Claude: 사세요", check: "Claude: 확인 필요", skip: "Claude: 거르세요" };
 
 export function DealCard({ deal }: { deal: Deal }) {
   const { listing: l, breakdown: b, estimate: e } = deal;
@@ -11,6 +13,11 @@ export function DealCard({ deal }: { deal: Deal }) {
     <article className="card deal">
       {l.imageUrl ? <img src={l.imageUrl} alt="" className="thumb" loading="lazy" /> : <div className="thumb" />}
       <div className="body">
+        {deal.review && (
+          <p className={`verdict ${deal.review.verdict}`}>
+            <b>{VERDICT[deal.review.verdict]}</b> {deal.review.reason}
+          </p>
+        )}
         <a href={l.webUrl} target="_blank" rel="noreferrer" className="title">
           {l.title}
         </a>
