@@ -57,7 +57,7 @@ export default async function DealsPage() {
       <div className="chips">
         {scans.map(({ hunt, scan }) => (
           <span key={hunt.id} className="chip">
-            {hunt.query} · {scan ? `${scan.deals.length}개 · 시세 ${money(scan.estimate?.median)}` : "미스캔"}
+            {hunt.query} · {scan ? `${scan.deals.filter((d) => d.review?.verdict !== "skip" && !owned.has(d.listing.itemId)).length}개 · 시세 ${money(scan.estimate?.median)}` : "미스캔"}
           </span>
         ))}
       </div>
